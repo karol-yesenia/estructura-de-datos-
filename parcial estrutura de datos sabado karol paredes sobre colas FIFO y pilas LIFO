@@ -1,0 +1,173 @@
+//karol yesenia paredes vasquez
+//andres mauricio vallecilla paredes
+#include <stdio.h>
+#include <malloc.h>
+
+struct jugador {
+    int id;
+    char nombre[30];
+    int edad;
+    char genero;
+    char deporte[50];
+    struct jugador *sig;
+};
+
+// FIFO - Cola de espera
+struct jugador *cab = NULL, *ultimo = NULL, *aux = NULL;
+
+// LIFO - Historial de participación
+struct jugador *top = NULL;
+
+// 1. Agregar jugador a la cola
+int agregarJugador() {
+    int diferencia = 0, hombres = 0, mujeres = 0;
+
+    aux = (struct jugador *) malloc(sizeof(struct jugador));
+    
+    printf("ID: ");
+    scanf("%d", &aux->id);
+    printf("Nombre: ");
+    scanf("%s", aux->nombre);
+    printf("Edad: ");
+    scanf("%d", &aux->edad);
+    printf("Genero (M/F): ");
+    scanf(" %c", &aux->genero);
+    printf("Deporte: ");
+    scanf("%s", aux->deporte);
+
+    if(aux->edad < 15){
+        printf("No se permite participar a menores de 15 años.\n");
+        free(aux);
+        return 0;
+    }
+
+    struct jugador *temp;
+    for(temp = cab; temp != NULL; temp = temp->sig){
+        if(temp->genero == 'M') hombres++;
+        if(temp->genero == 'F') mujeres++;
+    }
+    if(aux->genero == 'M') hombres++;
+    if(aux->genero == 'F') mujeres++;
+
+    diferencia = hombres - mujeres;
+    if(diferencia < 0) diferencia *= -1;
+
+    if(diferencia > 4){
+        printf("No se puede agregar, hay más de 4 de diferencia entre hombres y mujeres.\n");
+        free(aux);
+        return 0;
+    }
+
+    aux->sig = NULL;
+    if(cab == NULL){
+        cab = aux;
+    } else {
+        ultimo = cab;
+        while(ultimo->sig != NULL){
+            ultimo = ultimo->sig;
+        }
+        ultimo->sig = aux;
+    }
+    printf("Jugador agregado exitosamente.\n");
+    return 1;
+}
+
+// 2. Mostrar jugadores en espera
+int mostrarEnEspera() {
+    if(cab == NULL){
+        printf("No hay jugadores en espera.\n");
+        return 0;
+    }
+    for(aux = cab; aux != NULL; aux = aux->sig){
+        printf("ID: %d - Nombre: %s - Edad: %d - Genero: %c - Deporte: %s\n", aux->id, aux->nombre, aux->edad, aux->genero, aux->deporte);
+    }
+    return 1;
+}
+
+// 3. Contar jugadores en espera
+int contarEnEspera() {
+    int contador = 0;
+    for(aux = cab; aux != NULL; aux = aux->sig){
+        contador++;
+    }
+    printf("Jugadores en espera: %d\n", contador);
+    return contador;
+}
+
+// 4. Permitir participación del siguiente jugador
+int permitirParticipacion() {
+    if(cab == NULL){
+        printf("No hay jugadores en espera.\n");
+        return 0;
+    }
+    aux = cab;
+    cab = cab->sig;
+
+    // Pasar al historial (pila)
+    aux->sig = top;
+    top = aux;
+
+    printf("Jugador %s ahora participa y fue agregado al historial.\n", top->nombre);
+    return 1;
+}
+
+// 5. Mostrar historial de participación
+int mostrarHistorial() {
+    if(top == NULL){
+        printf("No hay historial.\n");
+        return 0;
+    }
+    for(aux = top; aux != NULL; aux = aux->sig){
+        printf("ID: %d - Nombre: %s - Edad: %d - Genero: %c - Deporte: %s\n", aux->id, aux->nombre, aux->edad, aux->genero, aux->deporte);
+    }
+    return 1;
+}
+
+// 6. Deshacer última participación
+int deshacerParticipacion() {
+    if(top == NULL){
+        printf("No hay participación que deshacer.\n");
+        return 0;
+    }
+    aux = top;
+    top = top->sig;
+
+    // Volver a poner en cola (al final)
+    aux->sig = NULL;
+    if(cab == NULL){
+        cab = aux;
+    } else {
+        ultimo = cab;
+        while(ultimo->sig != NULL){
+            ultimo = ultimo->sig;
+        }
+        ultimo->sig = aux;
+    }
+    printf("Se deshizo la última participación del jugador %s.\n", aux->nombre);
+    return 1;
+}
+
+// 7. Salir
+int main() {
+    int opc;
+    do {
+        printf("\n1. Agregar jugador a la cola\n");
+        printf("2. Mostrar jugadores en espera\n");
+        printf("3. Contar jugadores en espera\n");
+        printf("4. Permitir participación del siguiente jugador\n");
+        printf("5. Mostrar historial de participación\n");
+        printf("6. Deshacer última participación\n");
+        printf("7. Salir\n");
+        scanf("%d", &opc);
+        switch (opc)
+        {
+            case 1: agregarJugador(); break;
+            case 2: mostrarEnEspera(); break;
+            case 3: contarEnEspera(); break;
+            case 4: permitirParticipacion(); break;
+            case 5: mostrarHistorial(); break;
+            case 6: deshacerParticipacion(); break;
+        }
+    } while(opc != 7);
+    return 0;
+}
