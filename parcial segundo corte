@@ -1,0 +1,301 @@
+//karol yesenia paredes vasquez
+//andres mauricio vallecilla paredes 
+#include <iostream>
+#include <malloc.h>
+using namespace std;
+
+struct Nodo {
+    char nombre[50];
+    int anio;
+    char genero[20];
+    double recaudacion;
+    Nodo *izq;
+    Nodo *der;
+};
+
+Nodo *raiz = NULL;
+
+int compararChars(const char *a, const char *b) {
+    int i = 0;
+    while (a[i] != '\0' && b[i] != '\0') {
+        if (a[i] < b[i]) return -1;
+        else if (a[i] > b[i]) return 1;
+        i++;
+    }
+    if (a[i] == '\0' && b[i] == '\0') return 0;
+    if (a[i] == '\0') return -1;
+    return 1;
+}
+
+void copiarChars(char *destino, const char *origen) {
+    int i = 0;
+    while (origen[i] != '\0' && i < 49) {
+        destino[i] = origen[i];
+        i++;
+    }
+    destino[i] = '\0';
+}
+
+Nodo* crearNodo() {
+    Nodo nuevo = (Nodo) malloc(sizeof(Nodo));
+    nuevo->izq = NULL;
+    nuevo->der = NULL;
+
+    cin.ignore();  // <----- Aquí limpio el buffer ANTES de pedir el nombre
+
+    cout << "Nombre: ";
+    cin.getline(nuevo->nombre, 50);
+    
+    cout << "Año: ";
+    cin >> nuevo->anio;
+    
+    cin.ignore();  // <----- Limpio buffer antes de leer género
+
+    cout << "Género: ";
+    cin.getline(nuevo->genero, 20);
+    
+    cout << "Recaudación (millones, usar punto decimal): ";
+    cin >> nuevo->recaudacion;
+
+    return nuevo;
+}
+
+Nodo* insertar(Nodo *raiz, Nodo *nuevo) {
+    if (raiz == NULL) return nuevo;
+    if (nuevo->anio < raiz->anio)
+        raiz->izq = insertar(raiz->izq, nuevo);
+    else if (nuevo->anio > raiz->anio)
+        raiz->der = insertar(raiz->der, nuevo);
+    else {
+        cout << "Error: Ya existe una película con ese año (clave única).\n";
+        free(nuevo);
+    }
+    return raiz;
+}
+
+void mostrarInorden(Nodo *raiz) {
+    if (raiz != NULL) {
+        mostrarInorden(raiz->izq);
+        cout << raiz->anio << " | " << raiz->nombre << " | " << raiz->genero << " | $" << raiz->recaudacion << "M\n";
+        mostrarInorden(raiz->der);
+    }
+}
+
+void mostrarPreorden(Nodo *raiz) {
+    if (raiz != NULL) {
+        cout << raiz->anio << " | " << raiz->nombre << " | " << raiz->genero << " | $" << raiz->recaudacion << "M\n";
+        mostrarPreorden(raiz->izq);
+        mostrarPreorden(raiz->der);
+    }
+}
+
+void mostrarPosorden(Nodo *raiz) {
+    if (raiz != NULL) {
+        mostrarPosorden(raiz->izq);
+        mostrarPosorden(raiz->der);
+        cout << raiz->anio << " | " << raiz->nombre << " | " << raiz->genero << " | $" << raiz->recaudacion << "M\n";
+    }
+}
+
+Nodo* buscarPorNombre(Nodo *raiz, const char *nombre) {
+    if (raiz == NULL) return NULL;
+    if (compararChars(raiz->nombre, nombre) == 0) return raiz;
+
+    Nodo *izq = buscarPorNombre(raiz->izq, nombre);
+    if (izq != NULL) return izq;
+    return buscarPorNombre(raiz->der, nombre);
+}
+
+void mostrarPorGenero(Nodo *raiz, const char *genero) {
+    if (raiz != NULL) {
+        mostrarPorGenero(raiz->izq, genero);
+        if (compararChars(raiz->genero, genero) == 0) {
+            cout << raiz->anio << " | " << raiz->nombre << " | " << raiz->genero << " | $" << raiz->recaudacion << "M\n";
+        }
+        mostrarPorGenero(raiz->der, genero);
+    }
+}
+
+void guardarNodos(Nodo *raiz, Nodo *array[], int &cont) {
+    if (raiz != NULL) {
+        guardarNodos(raiz->izq, array, cont);
+        array[cont++] = raiz;
+        guardarNodos(raiz->der, array, cont);
+    }
+}
+
+void mostrar3Fracasos(Nodo *raiz) {
+    Nodo *array[100];
+    int cont = 0;
+    guardarNodos(raiz, array, cont);
+
+    for (int i = 0; i < cont - 1; i++) {
+        for (int j = 0; j < cont - 1 - i; j++) {
+            if (array[j]->recaudacion > array[j + 1]->recaudacion) {
+                Nodo *temp = array[j];
+                array[j] = array[j + 1];
+                array[j + 1] = temp;
+            }
+        }
+    }
+
+    cout << "3 fracasos taquilleros:\n";
+    int mostrar = cont < 3 ? cont : 3;
+    for (int i = 0; i < mostrar; i++) {
+        cout << array[i]->anio << " | " << array[i]->nombre << " | " << array[i]->genero << " | $" << array[i]->recaudacion << "M\n";
+    }
+}
+
+struct Resultado {
+    Nodo *nodo;
+    Nodo *padre;
+};
+
+Resultado buscarNodoYPadre(Nodo *actual, Nodo *padre, const char *nombre) {
+    Resultado res = {NULL, NULL};
+    if (actual == NULL) return res;
+
+    if (compararChars(actual->nombre, nombre) == 0) {
+        res.nodo = actual;
+        res.padre = padre;
+        return res;
+    }
+
+    res = buscarNodoYPadre(actual->izq, actual, nombre);
+    if (res.nodo != NULL) return res;
+
+    return buscarNodoYPadre(actual->der, actual, nombre);
+}
+
+void eliminarNodoPorNombre() {
+    if (raiz == NULL) {
+        cout << "El árbol está vacío.\n";
+        return;
+    }
+
+    char nombreEliminar[50];
+    cout << "Ingrese el nombre de la película a eliminar: ";
+    cin.ignore();
+    cin.getline(nombreEliminar, 50);
+
+    Resultado res = buscarNodoYPadre(raiz, NULL, nombreEliminar);
+    Nodo *nodoEliminar = res.nodo;
+    Nodo *padre = res.padre;
+
+    if (nodoEliminar == NULL) {
+        cout << "No se encontró la película con ese nombre.\n";
+        return;
+    }
+
+    // sin hijos
+    if (nodoEliminar->izq == NULL && nodoEliminar->der == NULL) {
+        if (padre == NULL) raiz = NULL;
+        else if (padre->izq == nodoEliminar) padre->izq = NULL;
+        else padre->der = NULL;
+        free(nodoEliminar);
+        cout << "Película eliminada (sin hijos).\n";
+        return;
+    }
+
+    // un hijo
+    if (nodoEliminar->izq == NULL || nodoEliminar->der == NULL) {
+        Nodo *hijo = (nodoEliminar->izq != NULL) ? nodoEliminar->izq : nodoEliminar->der;
+        if (padre == NULL) raiz = hijo;
+        else if (padre->izq == nodoEliminar) padre->izq = hijo;
+        else padre->der = hijo;
+        free(nodoEliminar);
+        cout << "Película eliminada (con un hijo).\n";
+        return;
+    }
+
+    // dos hijos
+    Nodo *padreSucesor = nodoEliminar;
+    Nodo *sucesor = nodoEliminar->der;
+    while (sucesor->izq != NULL) {
+        padreSucesor = sucesor;
+        sucesor = sucesor->izq;
+    }
+
+    copiarChars(nodoEliminar->nombre, sucesor->nombre);
+    nodoEliminar->anio = sucesor->anio;
+    copiarChars(nodoEliminar->genero, sucesor->genero);
+    nodoEliminar->recaudacion = sucesor->recaudacion;
+
+    Nodo *hijoSucesor = sucesor->der;
+    if (padreSucesor->izq == sucesor) padreSucesor->izq = hijoSucesor;
+    else padreSucesor->der = hijoSucesor;
+
+    free(sucesor);
+    cout << "Película eliminada (con dos hijos).\n";
+}
+
+int main() {
+    int opcion;
+    do {
+        cout << "\nMenu:\n";
+        cout << "1. Insertar película\n";
+        cout << "2. Mostrar Inorden\n";
+        cout << "3. Mostrar Preorden\n";
+        cout << "4. Mostrar Posorden\n";
+        cout << "5. Buscar por nombre\n";
+        cout << "6. Mostrar por género\n";
+        cout << "7. Mostrar 3 fracasos\n";
+        cout << "8. Eliminar por nombre\n";
+        cout << "9. Salir\n";
+        cout << "Opción: ";
+        cin >> opcion;
+
+        switch(opcion) {
+            case 1: {
+                Nodo *nuevo = crearNodo();
+                raiz = insertar(raiz, nuevo);
+                break;
+            }
+            case 2:
+                cout << "Mostrar Inorden:\n";
+                mostrarInorden(raiz);
+                break;
+            case 3:
+                cout << "Mostrar Preorden:\n";
+                mostrarPreorden(raiz);
+                break;
+            case 4:
+                cout << "Mostrar Posorden:\n";
+                mostrarPosorden(raiz);
+                break;
+            case 5: {
+                cin.ignore();
+                char nombreBuscar[50];
+                cout << "Ingrese nombre a buscar: ";
+                cin.getline(nombreBuscar, 50);
+                Nodo *encontrado = buscarPorNombre(raiz, nombreBuscar);
+                if (encontrado != NULL)
+                    cout << encontrado->anio << " | " << encontrado->nombre << " | " << encontrado->genero << " | $" << encontrado->recaudacion << "M\n";
+                else
+                    cout << "Película no encontrada.\n";
+                break;
+            }
+            case 6: {
+                cin.ignore();
+                char generoBuscar[20];
+                cout << "Ingrese género a mostrar: ";
+                cin.getline(generoBuscar, 20);
+                mostrarPorGenero(raiz, generoBuscar);
+                break;
+            }
+            case 7:
+                mostrar3Fracasos(raiz);
+                break;
+            case 8:
+                eliminarNodoPorNombre();
+                break;
+            case 9:
+                cout << "Saliendo...\n";
+                break;
+            default:
+                cout << "Opción inválida.\n";
+        }
+    } while (opcion != 9);
+
+    return 0;
+}
