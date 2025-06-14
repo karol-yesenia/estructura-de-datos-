@@ -1,0 +1,149 @@
+#include <iostream>
+using namespace std;
+
+enum Color { ROJO, NEGRO };
+
+struct Nodo {
+    int dato;
+    bool color;
+    Nodo *izq, *der, *padre;
+
+    Nodo(int dato): dato(dato), color(ROJO), izq(nullptr), der(nullptr), padre(nullptr) {}
+};
+
+class ArbolRojoNegro {
+private:
+    Nodo* raiz;
+
+    void rotacionIzquierda(Nodo* &raiz, Nodo* &x) {
+        Nodo* y = x->der;
+        x->der = y->izq;
+        if (y->izq != nullptr)
+            y->izq->padre = x;
+        y->padre = x->padre;
+
+        if (x->padre == nullptr)
+            raiz = y;
+        else if (x == x->padre->izq)
+            x->padre->izq = y;
+        else
+            x->padre->der = y;
+
+        y->izq = x;
+        x->padre = y;
+    }
+
+    void rotacionDerecha(Nodo* &raiz, Nodo* &x) {
+        Nodo* y = x->izq;
+        x->izq = y->der;
+        if (y->der != nullptr)
+            y->der->padre = x;
+        y->padre = x->padre;
+
+        if (x->padre == nullptr)
+            raiz = y;
+        else if (x == x->padre->der)
+            x->padre->der = y;
+        else
+            x->padre->izq = y;
+
+        y->der = x;
+        x->padre = y;
+    }
+
+    void repararInsercion(Nodo* &raiz, Nodo* &pt) {
+        Nodo* padre_pt = nullptr;
+        Nodo* abuelo_pt = nullptr;
+
+        while ((pt != raiz) && (pt->color != NEGRO) && (pt->padre->color == ROJO)) {
+            padre_pt = pt->padre;
+            abuelo_pt = padre_pt->padre;
+
+            if (padre_pt == abuelo_pt->izq) {
+                Nodo* tio_pt = abuelo_pt->der;
+                if (tio_pt != nullptr && tio_pt->color == ROJO) {
+                    abuelo_pt->color = ROJO;
+                    padre_pt->color = NEGRO;
+                    tio_pt->color = NEGRO;
+                    pt = abuelo_pt;
+                } else {
+                    if (pt == padre_pt->der) {
+                        rotacionIzquierda(raiz, padre_pt);
+                        pt = padre_pt;
+                        padre_pt = pt->padre;
+                    }
+                    rotacionDerecha(raiz, abuelo_pt);
+                    swap(padre_pt->color, abuelo_pt->color);
+                    pt = padre_pt;
+                }
+            } else {
+                Nodo* tio_pt = abuelo_pt->izq;
+                if (tio_pt != nullptr && tio_pt->color == ROJO) {
+                    abuelo_pt->color = ROJO;
+                    padre_pt->color = NEGRO;
+                    tio_pt->color = NEGRO;
+                    pt = abuelo_pt;
+                } else {
+                    if (pt == padre_pt->izq) {
+                        rotacionDerecha(raiz, padre_pt);
+                        pt = padre_pt;
+                        padre_pt = pt->padre;
+                    }
+                    rotacionIzquierda(raiz, abuelo_pt);
+                    swap(padre_pt->color, abuelo_pt->color);
+                    pt = padre_pt;
+                }
+            }
+        }
+        raiz->color = NEGRO;
+    }
+
+    void insertarNodo(Nodo* &raiz, Nodo* &pt) {
+        if (raiz == nullptr)
+            raiz = pt;
+        else if (pt->dato < raiz->dato) {
+            insertarNodo(raiz->izq, pt);
+            raiz->izq->padre = raiz;
+        } else if (pt->dato > raiz->dato) {
+            insertarNodo(raiz->der, pt);
+            raiz->der->padre = raiz;
+        }
+    }
+
+    void inOrden(Nodo* raiz) {
+        if (raiz == nullptr)
+            return;
+        inOrden(raiz->izq);
+        cout << raiz->dato << " (" << (raiz->color == ROJO ? "Rojo" : "Negro") << ") ";
+        inOrden(raiz->der);
+    }
+
+public:
+    ArbolRojoNegro() : raiz(nullptr) {}
+
+    void insertar(const int &dato) {
+        Nodo* pt = new Nodo(dato);
+        insertarNodo(this->raiz, pt);
+        repararInsercion(this->raiz, pt);
+    }
+
+    void mostrar() {
+        inOrden(this->raiz);
+        cout << endl;
+    }
+};
+
+int main() {
+    ArbolRojoNegro arbol;
+    arbol.insertar(10);
+    arbol.insertar(20);
+    arbol.insertar(30);
+    arbol.insertar(15);
+    arbol.insertar(25);
+    arbol.insertar(5);
+
+    cout << "Árbol Rojo-Negro (inorden):\n";
+    arbol.mostrar();
+
+    return 0;
+}
